@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as AdmZip from 'adm-zip'
 import {fileExists, dirExists} from './util'
-import md5 = require('md5');
 
 let dir: fs.Dir = null
 
