@@ -12,7 +12,6 @@ paths.forEach(element => {
     }
 });
 
-
 const argv : any = yargs(hideBin(process.argv)).argv // Init Args
 
 if(argv.datapack) {              // Handle le args
