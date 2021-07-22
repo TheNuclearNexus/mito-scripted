@@ -258,7 +258,7 @@ function buildFinalDatapack() {
         }
     }
 
-    let f : number = fs.openSync('conflicts.txt', 'w')
+    let f : number = fs.openSync('output/datapack/conflicts.txt', 'w')
 
     for(let c in conflicts) {
         fs.writeSync(f, c)
