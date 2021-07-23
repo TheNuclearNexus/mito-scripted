@@ -1,19 +1,8 @@
 import * as fs from 'fs';
 import * as AdmZip from 'adm-zip'
 import {fileExists, dirExists} from './util'
-
-let dir: fs.Dir = null
-
-class TagValue {
-    required: boolean = false;
-    value: string = ""
-}
-
-class Tag {
-    replace: boolean = false;
-    values = []
-
-}
+import { argv } from '.';
+import LMT = require('./datapackTools/loot_table_merger')
 
 interface NamespaceGroup {
     [key:string]: string[]
@@ -63,6 +52,7 @@ class Datapack {
     }
 }
 
+let dir: fs.Dir = null
 let validDatapacks: string[] = []
 let datapacks: Datapack[] = []
 let datapacksFolder: string
@@ -142,7 +132,10 @@ function getNamespace(path: string) : [string, Namespace] {
     let entry = content.readSync()
     while(entry != null) {
         if(entry.isDirectory()) {
-            let ext = entry.name == 'functions' ? 'mcfunction' : 'json'
+            let ext = 'json'
+            if(entry.name == 'functions') ext = 'mcfunction'
+            else if(entry.name == 'structures') ext = 'nbt'
+
             namespace.data[entry.name] = getFiles(path + `/${entry.name}`, ext, namespace)
         }
 
@@ -185,6 +178,10 @@ function toDatapackPath(path: string): string {
     return parts.join('/')
 }
 
+interface ConflictDict {
+    [key: string]: string[]
+}
+
 function buildFinalDatapack() {
     if(dirExists('output/datapack')) {
         fs.rmdirSync('output/datapack', {recursive: true})
@@ -211,12 +208,16 @@ function buildFinalDatapack() {
     })
 
     //fs.writeFileSync('debug.json', JSON.stringify(finalDP, null, 2))
-    let conflicts : string[] = []
+    let conflicts : ConflictDict = {}
 
     for(let n in finalDP.namespaces) {
         for(let f in finalDP.namespaces[n].data) {
             finalDP.namespaces[n].data[f].forEach(file => {
                 let dpPath = toDatapackPath(file)
+
+                if(conflicts[dpPath] == null) {
+                    conflicts[dpPath] = [file]
+                }
 
                 let paths: string[] = dpPath.split('/')
 
@@ -248,8 +249,11 @@ function buildFinalDatapack() {
                         strB = strB.replace(/\s+/g, '')
 
                         if(strA != strB) {
-                            console.log('Conflict @ ' + file + '\n')
-                            conflicts.push('Conflict @ ' + dpPath + '\n')
+                            conflicts[dpPath].push(file)
+
+                            if(f == 'loot_tables' && argv.mergeLootTables == 'true') {
+                                fs.writeFileSync(dpPath, JSON.stringify(LMT.merge(dpPath, file), null, 2))
+                            }
                         }
                     }
                 }
@@ -258,11 +262,30 @@ function buildFinalDatapack() {
         }
     }
 
-    let f : number = fs.openSync('output/datapack/conflicts.txt', 'w')
+    let f : number = fs.openSync('output/datapack/conflicts.yaml', 'w')
+
+    let numberOfConflicts = 0
 
     for(let c in conflicts) {
-        fs.writeSync(f, c)
+        if(conflicts[c].length > 1) {
+            if(c.includes('loot_tables/') && argv.mergeLootTables == 'true') {
+                fs.appendFileSync(f, `[MERGED] ${c.replace('output/datapack/data/', '')}:\n`)
+            } else {
+                fs.appendFileSync(f, `${c.replace('output/datapack/data/', '')}:\n`)
+            }
+            conflicts[c].forEach(file => {
+                fs.appendFileSync(f, ` - ${file.replace(datapacksFolder, '')}\n`)
+            })
+            numberOfConflicts++
+        }
     }
+
+    if(argv.mergeLootTables == 'true') {
+        console.log(`[Merger] Even though 'mergeLootTables' was enabled, the merger still causes bugs and the files should be check manually!`)
+    }
+    console.log(`[Merger] Found ${numberOfConflicts} conflict${numberOfConflicts > 1 ? 's' : ''}, listed in 'output/datapack/conflicts.yaml'`)
+
+
 
     fs.closeSync(f)
 }
