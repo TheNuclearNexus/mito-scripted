@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import {runDatapack} from './datapack'; 
+import { runResourcepack } from './resourcepack';
 import { dirExists, fileExists } from './util';
 
 let paths : string[] = [
@@ -53,6 +54,10 @@ if(argv.extractVersion == 'true') {
 
 
 if(argv.datapack) {              // Handle le args
-    console.log('[Merger] Starting to merge datapacks')
+    console.log('[Merger-DP] Starting to merge datapacks')
     runDatapack(argv.datapack)
+}
+if(argv.resourcepack) {
+    console.log('[Merger-RP] Starting to merge resourcepacks')
+    runResourcepack(argv.resourcepack)
 }

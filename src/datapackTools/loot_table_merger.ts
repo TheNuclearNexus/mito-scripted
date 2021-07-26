@@ -21,6 +21,7 @@ export function merge(currentPath : string, newPath : string) {
 }
 
 function entriesSimilar(entryA, entryB) : boolean {
+
     if(entryA["type"] != entryB["type"])
         return false
     if(entryA["name"] != entryB["name"])
@@ -38,6 +39,7 @@ function poolsSimilar(poolA, poolB) : boolean {
         for(let eB in poolB["entries"]) {
             if(entriesSimilar(poolA["entries"][eA], poolB["entries"][eB])) {
                 total++
+                break;
             }
         }
     }
